@@ -20,6 +20,7 @@
 
 using std::string;
 using std::vector;
+using std::normal_distribution;
 
 void ParticleFilter::init(double x, double y, double theta, double std[]) {
   /**
@@ -30,8 +31,29 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
    * NOTE: Consult particle_filter.h for more information about this method 
    *   (and others in this file).
    */
-  num_particles = 0;  // TODO: Set the number of particles
+  num_particles = 100;  // TODO: Set the number of particles
+  
+  //create normal distributions for x,y,theta
+  normal_distribution<double> dist_x(x, std[0]);
+  normal_distribution<double> dist_y(y, std[1]);
+  normal_distribution<double> dist_theta(theta, std[2]);
 
+  //create random number generator
+  std::default_random_engine gen;
+
+  //Create particles in for loop
+  for (int i=0; i < num_particles; ++i){
+	  Particle myparticle;
+	  myparticle.id = i;
+	  myparticle.x = dist_x(gen); //sample from gaussian with generator
+	  myparticle.y = dist_y(gen);
+	  myparticle.theta = dist_theta(gen);
+	  myparticle.weight = 1;
+
+	  particles.push_back(myparticle); //Append each particle too the set of current particles
+  }
+  //Set is initalized to true
+  is_initialized = true;
 }
 
 void ParticleFilter::prediction(double delta_t, double std_pos[], 
@@ -43,7 +65,30 @@ void ParticleFilter::prediction(double delta_t, double std_pos[],
    *  http://en.cppreference.com/w/cpp/numeric/random/normal_distribution
    *  http://www.cplusplus.com/reference/random/default_random_engine/
    */
+  //create normal distributions for measurements
+  normal_distribution<double> ND_x(0, std_pos[0]);
+  normal_distribution<double> ND_y(0, std_pos[1]);
+  normal_distribution<double> ND_theta(0, std_pos[2]);
 
+  //create random number generator
+  std::default_random_engine gen;
+
+	for (int i = 0; i < particles.size(); i++){
+		//when yaw rate is zero
+		if(fabs(yaw_rate) < 0.001){
+			particles[i].x += velocity * delta_t * cos(particles[i].theta);
+			particles[i].y += velocity * delta_t * sin(particles[i].theta);
+		} else { //when the yaw rate is not zero
+			particles[i].x += velocity / yaw_rate * ( sin(particles[i].theta + yaw_rate*delta_t) - sin(particles[i].theta) );
+			particles[i].y += velocity / yaw_rate * ( cos(particles[i].theta + yaw_rate*delta_t) - cos(particles[i].theta) );
+			particles[i].theta += yaw_rate * delta_t;
+		}
+
+		//Add noise
+		particles[i].x += ND_x(gen);
+		particles[i].y += ND_y(gen);
+		particles[i].theta += ND_theta(gen);	
+	}
 }
 
 void ParticleFilter::dataAssociation(vector<LandmarkObs> predicted, 
@@ -56,6 +101,23 @@ void ParticleFilter::dataAssociation(vector<LandmarkObs> predicted,
    *   probably find it useful to implement this method and use it as a helper 
    *   during the updateWeights phase.
    */
+   
+   //Loop through observations
+   for (int i=0; i<observations.size(); i++){
+
+	   double shortest_dist = std::numeric_limits<double>::max(); //set inital shortest distance to infinite
+	   int id = -1; //Initial id of shortest distance measurement
+
+	   //For each observation loop through the predictions
+	   for (int j=0; j<predicted.size();j++){
+		   double distance = dist(observations[i].x, observations[i].y, predicted[j].x, predicted[j].y);
+		   if (distance < shortest_dist){
+			   shortest_dist = distance;
+
+		   }
+
+	   }
+   }
 
 }
 
