@@ -76,7 +76,7 @@ void ParticleFilter::prediction(double delta_t, double std_pos[],
 			particles[i].y += velocity * delta_t * sin(particles[i].theta);
 		} else { //when the yaw rate is not zero
 			particles[i].x += velocity / yaw_rate * ( sin(particles[i].theta + yaw_rate*delta_t) - sin(particles[i].theta) );
-			particles[i].y += velocity / yaw_rate * ( cos(particles[i].theta + yaw_rate*delta_t) - cos(particles[i].theta) );
+			particles[i].y += velocity / yaw_rate * ( cos(particles[i].theta) - cos(particles[i].theta + yaw_rate*delta_t));
 			particles[i].theta += yaw_rate * delta_t;
 		}
 
@@ -173,6 +173,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 		
 		//Landmark Association
 		dataAssociation(predicted, transformed_obs);
+		particles[i].weight = 1;
 		
 		//Weight update
 		for (int ii=0; ii<transformed_obs.size(); ii++){
